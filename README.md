@@ -137,9 +137,9 @@ List my Trello boards
 
 ---
 
-## Option C: Using a Published Docker Image
+## Option C: Using the Published Docker Image
 
-If someone has published this image to a container registry, you don't need to clone the repo at all.
+The image is published on [Docker Hub](https://hub.docker.com/r/gabermz/trello-mcp). No cloning or Node.js required.
 
 ### Step 1: Run the container
 
