@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as z from "zod/v4";
 import { TrelloClient } from "../trello-client.js";
-import { textResult, errorResult } from "../utils/response.js";
+import { textResult, handleToolError } from "../utils/response.js";
 import type { TrelloSearchResult } from "../types.js";
 
 export function register(server: McpServer, client: TrelloClient) {
@@ -50,7 +50,7 @@ export function register(server: McpServer, client: TrelloClient) {
         const results = await client.get<TrelloSearchResult>("/search", params);
         return textResult(results);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
       }
     },
   );

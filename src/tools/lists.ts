@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as z from "zod/v4";
 import { TrelloClient } from "../trello-client.js";
-import { textResult, errorResult } from "../utils/response.js";
+import { textResult, handleToolError } from "../utils/response.js";
 import type { TrelloList, TrelloCard } from "../types.js";
 
 export function register(server: McpServer, client: TrelloClient) {
@@ -27,7 +27,7 @@ export function register(server: McpServer, client: TrelloClient) {
         ]);
         return textResult({ ...list, cards });
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
       }
     },
   );
@@ -53,7 +53,7 @@ export function register(server: McpServer, client: TrelloClient) {
         const list = await client.post<TrelloList>("/lists", params);
         return textResult(list);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
       }
     },
   );
@@ -83,7 +83,7 @@ export function register(server: McpServer, client: TrelloClient) {
         );
         return textResult(list);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
       }
     },
   );
@@ -104,7 +104,94 @@ export function register(server: McpServer, client: TrelloClient) {
         });
         return textResult(list);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "unarchive_list",
+    {
+      title: "Unarchive List",
+      description: "Unarchive (reopen) a closed Trello list.",
+      inputSchema: z.object({
+        listId: z.string().describe("The ID of the list to unarchive"),
+      }),
+    },
+    async ({ listId }) => {
+      try {
+        const list = await client.put<TrelloList>(`/lists/${listId}`, {
+          closed: "false",
+        });
+        return textResult(list);
+      } catch (err) {
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "move_all_cards",
+    {
+      title: "Move All Cards",
+      description: "Move all cards from one list to another.",
+      inputSchema: z.object({
+        listId: z.string().describe("The ID of the source list"),
+        idBoard: z.string().describe("The ID of the destination board"),
+        idList: z.string().describe("The ID of the destination list"),
+      }),
+    },
+    async ({ listId, idBoard, idList }) => {
+      try {
+        await client.post(`/lists/${listId}/moveAllCards`, {
+          idBoard,
+          idList,
+        });
+        return textResult({ success: true, fromList: listId, toList: idList });
+      } catch (err) {
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "archive_all_cards",
+    {
+      title: "Archive All Cards",
+      description: "Archive all cards in a list.",
+      inputSchema: z.object({
+        listId: z.string().describe("The ID of the list"),
+      }),
+    },
+    async ({ listId }) => {
+      try {
+        await client.post(`/lists/${listId}/archiveAllCards`);
+        return textResult({ success: true, listId });
+      } catch (err) {
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "move_list_to_board",
+    {
+      title: "Move List to Board",
+      description: "Move a list to a different board.",
+      inputSchema: z.object({
+        listId: z.string().describe("The ID of the list to move"),
+        boardId: z.string().describe("The ID of the destination board"),
+      }),
+    },
+    async ({ listId, boardId }) => {
+      try {
+        const list = await client.put<TrelloList>(
+          `/lists/${listId}/idBoard`,
+          { value: boardId },
+        );
+        return textResult(list);
+      } catch (err) {
+        return handleToolError(err);
       }
     },
   );

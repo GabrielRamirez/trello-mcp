@@ -2,7 +2,7 @@
 
 A [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server that connects [Trello](https://trello.com) to Claude Code. Manage your boards, lists, cards, checklists, and more — all through natural language.
 
-> **27 tools** | **Zero config startup** | **Auto-loads `.env`** | **Docker ready** | **Remote HTTP support**
+> **73 tools** | **Zero config startup** | **Auto-loads `.env`** | **Docker ready** | **Remote HTTP support**
 
 ---
 
@@ -57,7 +57,7 @@ Open Claude Code and ask:
 List my Trello boards
 ```
 
-You should see your boards listed. The 27 Trello tools are now available in every Claude Code conversation.
+You should see your boards listed. The 73 Trello tools are now available in every Claude Code conversation.
 
 ---
 
@@ -221,7 +221,7 @@ Once connected, just ask Claude in natural language:
 
 ## Tools Reference
 
-### Boards (8 tools)
+### Boards (14 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -231,10 +231,16 @@ Once connected, just ask Claude in natural language:
 | `get_board_cards` | Get all cards on a board |
 | `get_board_labels` | Get all labels on a board |
 | `get_board_members` | Get all members of a board |
+| `get_board_actions` | Get the activity feed for a board |
+| `get_board_custom_fields` | Get custom field definitions on a board |
 | `create_board` | Create a new board |
+| `update_board` | Update name, description, closed status, or background |
+| `delete_board` | Permanently delete a board (irreversible) |
 | `create_label` | Create a new label on a board |
+| `add_board_member` | Add a member to a board with a role |
+| `remove_board_member` | Remove a member from a board |
 
-### Cards (11 tools)
+### Cards (20 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -243,14 +249,23 @@ Once connected, just ask Claude in natural language:
 | `update_card` | Update card name, description, due date, or position |
 | `move_card` | Move a card to a different list or board |
 | `archive_card` | Archive a card (reversible) |
+| `unarchive_card` | Unarchive (reopen) a closed card |
 | `delete_card` | Permanently delete a card (irreversible) |
 | `add_comment` | Add a comment to a card |
+| `update_comment` | Edit a comment on a card |
+| `delete_comment` | Delete a comment from a card |
 | `add_label_to_card` | Add a label to a card |
 | `remove_label_from_card` | Remove a label from a card |
 | `add_member_to_card` | Assign a member to a card |
 | `remove_member_from_card` | Unassign a member from a card |
+| `get_card_actions` | Get the activity feed for a card |
+| `list_attachments` | List all attachments on a card |
+| `add_attachment` | Add a URL attachment to a card |
+| `delete_attachment` | Delete an attachment from a card |
+| `get_card_custom_fields` | Get custom field values for a card |
+| `update_custom_field_item` | Set a custom field value on a card |
 
-### Lists (4 tools)
+### Lists (8 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -258,20 +273,78 @@ Once connected, just ask Claude in natural language:
 | `create_list` | Create a new list on a board |
 | `update_list` | Rename or reposition a list |
 | `archive_list` | Archive a list |
+| `unarchive_list` | Unarchive (reopen) a closed list |
+| `move_all_cards` | Move all cards from one list to another |
+| `archive_all_cards` | Archive all cards in a list |
+| `move_list_to_board` | Move a list to a different board |
 
-### Checklists (3 tools)
+### Checklists (7 tools)
 
 | Tool | Description |
 |------|-------------|
 | `create_checklist` | Create a checklist on a card |
+| `get_checklist` | Get a checklist by ID with all its items |
+| `update_checklist` | Rename or reposition a checklist |
+| `delete_checklist` | Permanently delete a checklist |
 | `add_checklist_item` | Add an item to a checklist |
 | `update_checklist_item` | Toggle, rename, or reposition a checklist item |
+| `delete_checklist_item` | Delete an item from a checklist |
+
+### Labels (3 tools)
+
+| Tool | Description |
+|------|-------------|
+| `get_label` | Get a label by ID |
+| `update_label` | Update a label's name or color |
+| `delete_label` | Permanently delete a label |
+
+### Members (7 tools)
+
+| Tool | Description |
+|------|-------------|
+| `get_member` | Get member info by ID or username |
+| `get_member_cards` | Get all cards assigned to a member |
+| `get_member_boards` | Get all boards a member belongs to |
+| `get_member_organizations` | Get all workspaces a member belongs to |
+| `get_notifications` | Get notifications for the authenticated user |
+| `mark_all_notifications_read` | Mark all notifications as read |
+| `search_members` | Search for members by name, username, or email |
+
+### Custom Fields (4 tools)
+
+| Tool | Description |
+|------|-------------|
+| `create_custom_field` | Create a custom field definition on a board |
+| `get_custom_field` | Get a custom field definition by ID |
+| `delete_custom_field` | Delete a custom field definition |
+| `get_custom_field_options` | Get dropdown options for a list-type custom field |
+
+### Organizations (5 tools)
+
+| Tool | Description |
+|------|-------------|
+| `get_organization` | Get workspace details by ID or name |
+| `get_organization_members` | Get all members of a workspace |
+| `get_organization_boards` | Get all boards in a workspace |
+| `create_organization` | Create a new workspace |
+| `update_organization` | Update workspace name, description, or website |
+
+### Webhooks (4 tools)
+
+| Tool | Description |
+|------|-------------|
+| `create_webhook` | Create a webhook for model change notifications |
+| `get_webhook` | Get webhook details by ID |
+| `update_webhook` | Update a webhook's URL, model, or active status |
+| `delete_webhook` | Delete a webhook |
 
 ### Search (1 tool)
 
 | Tool | Description |
 |------|-------------|
 | `search` | Search boards and cards with [Trello search operators](https://support.atlassian.com/trello/docs/searching-for-cards-all-boards/) (`@member`, `#label`, `list:name`, `is:open`, etc.) |
+
+> Tools that require Trello Premium or Enterprise (Custom Fields, some board features) will return a clear error message if your account doesn't have access.
 
 ---
 
@@ -286,11 +359,16 @@ trello-mcp/
 │   ├── trello-client.ts      # HTTP client with auth and error handling
 │   ├── types.ts              # TypeScript interfaces for Trello objects
 │   ├── tools/
-│   │   ├── boards.ts         # Board tools (8)
-│   │   ├── cards.ts          # Card tools (11)
-│   │   ├── lists.ts          # List tools (4)
-│   │   ├── search.ts         # Search tool (1)
-│   │   └── checklists.ts     # Checklist tools (3)
+│   │   ├── boards.ts         # Board tools (14)
+│   │   ├── cards.ts          # Card tools (20)
+│   │   ├── lists.ts          # List tools (8)
+│   │   ├── checklists.ts     # Checklist tools (7)
+│   │   ├── labels.ts         # Label tools (3)
+│   │   ├── members.ts        # Member tools (7)
+│   │   ├── customfields.ts   # Custom Field tools (4)
+│   │   ├── organizations.ts  # Organization tools (5)
+│   │   ├── webhooks.ts       # Webhook tools (4)
+│   │   └── search.ts         # Search tool (1)
 │   └── utils/
 │       ├── env.ts            # .env file loader
 │       └── response.ts       # Response formatting helpers

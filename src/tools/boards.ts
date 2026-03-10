@@ -1,13 +1,15 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as z from "zod/v4";
 import { TrelloClient } from "../trello-client.js";
-import { textResult, errorResult } from "../utils/response.js";
+import { textResult, handleToolError } from "../utils/response.js";
 import type {
   TrelloBoard,
   TrelloList,
   TrelloCard,
   TrelloLabel,
   TrelloMember,
+  TrelloAction,
+  TrelloCustomField,
 } from "../types.js";
 
 export function register(server: McpServer, client: TrelloClient) {
@@ -36,7 +38,7 @@ export function register(server: McpServer, client: TrelloClient) {
         );
         return textResult(boards);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
       }
     },
   );
@@ -58,7 +60,7 @@ export function register(server: McpServer, client: TrelloClient) {
         });
         return textResult(board);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
       }
     },
   );
@@ -88,7 +90,7 @@ export function register(server: McpServer, client: TrelloClient) {
         );
         return textResult(lists);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
       }
     },
   );
@@ -118,7 +120,7 @@ export function register(server: McpServer, client: TrelloClient) {
         );
         return textResult(cards);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
       }
     },
   );
@@ -139,7 +141,7 @@ export function register(server: McpServer, client: TrelloClient) {
         );
         return textResult(labels);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
       }
     },
   );
@@ -160,7 +162,7 @@ export function register(server: McpServer, client: TrelloClient) {
         );
         return textResult(members);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
       }
     },
   );
@@ -188,7 +190,7 @@ export function register(server: McpServer, client: TrelloClient) {
         const board = await client.post<TrelloBoard>("/boards", params);
         return textResult(board);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
       }
     },
   );
@@ -217,7 +219,170 @@ export function register(server: McpServer, client: TrelloClient) {
         );
         return textResult(label);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "update_board",
+    {
+      title: "Update Board",
+      description:
+        "Update a board's name, description, closed status, or background color.",
+      inputSchema: z.object({
+        boardId: z.string().describe("The ID of the board"),
+        name: z.string().optional().describe("New name for the board"),
+        desc: z.string().optional().describe("New description"),
+        closed: z.boolean().optional().describe("Whether the board is closed (archived)"),
+        background: z
+          .string()
+          .optional()
+          .describe(
+            "Board background — a color name (blue, orange, green, red, purple, pink, lime, sky, grey) or a custom background image ID",
+          ),
+      }),
+    },
+    async ({ boardId, name, desc, closed, background }) => {
+      try {
+        const params: Record<string, string> = {};
+        if (name !== undefined) params.name = name;
+        if (desc !== undefined) params.desc = desc;
+        if (closed !== undefined) params.closed = String(closed);
+        if (background !== undefined) params["prefs/background"] = background;
+        const board = await client.put<TrelloBoard>(
+          `/boards/${boardId}`,
+          params,
+        );
+        return textResult(board);
+      } catch (err) {
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "delete_board",
+    {
+      title: "Delete Board",
+      description:
+        "Permanently delete a Trello board. WARNING: This is irreversible — all lists, cards, and data on the board will be lost.",
+      inputSchema: z.object({
+        boardId: z.string().describe("The ID of the board to permanently delete"),
+      }),
+    },
+    async ({ boardId }) => {
+      try {
+        await client.delete(`/boards/${boardId}`);
+        return textResult({ deleted: true, boardId });
+      } catch (err) {
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "get_board_actions",
+    {
+      title: "Get Board Actions",
+      description: "Get the activity feed (actions) for a board.",
+      inputSchema: z.object({
+        boardId: z.string().describe("The ID of the board"),
+        filter: z
+          .string()
+          .optional()
+          .describe("Comma-separated action types to filter (e.g. commentCard,updateCard)"),
+        limit: z
+          .number()
+          .optional()
+          .describe("Max number of actions to return (default: 50, max: 1000)"),
+      }),
+    },
+    async ({ boardId, filter, limit }) => {
+      try {
+        const params: Record<string, string> = {
+          fields: "id,type,date,data,memberCreator",
+          member_fields: "fullName,username",
+        };
+        if (filter) params.filter = filter;
+        if (limit !== undefined) params.limit = String(limit);
+        const actions = await client.get<TrelloAction[]>(
+          `/boards/${boardId}/actions`,
+          params,
+        );
+        return textResult(actions);
+      } catch (err) {
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "get_board_custom_fields",
+    {
+      title: "Get Board Custom Fields",
+      description:
+        "Get all custom field definitions on a board. Requires Trello Premium or Enterprise.",
+      inputSchema: z.object({
+        boardId: z.string().describe("The ID of the board"),
+      }),
+    },
+    async ({ boardId }) => {
+      try {
+        const fields = await client.get<TrelloCustomField[]>(
+          `/boards/${boardId}/customFields`,
+        );
+        return textResult(fields);
+      } catch (err) {
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "add_board_member",
+    {
+      title: "Add Board Member",
+      description: "Add a member to a board with a specified role.",
+      inputSchema: z.object({
+        boardId: z.string().describe("The ID of the board"),
+        memberId: z.string().describe("The ID of the member to add"),
+        type: z
+          .enum(["admin", "normal", "observer"])
+          .optional()
+          .describe("Member role on the board (default: normal)"),
+      }),
+    },
+    async ({ boardId, memberId, type }) => {
+      try {
+        const params: Record<string, string> = { type: type ?? "normal" };
+        const member = await client.put<TrelloMember>(
+          `/boards/${boardId}/members/${memberId}`,
+          params,
+        );
+        return textResult(member);
+      } catch (err) {
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "remove_board_member",
+    {
+      title: "Remove Board Member",
+      description: "Remove a member from a board.",
+      inputSchema: z.object({
+        boardId: z.string().describe("The ID of the board"),
+        memberId: z.string().describe("The ID of the member to remove"),
+      }),
+    },
+    async ({ boardId, memberId }) => {
+      try {
+        await client.delete(`/boards/${boardId}/members/${memberId}`);
+        return textResult({ success: true, boardId, memberId });
+      } catch (err) {
+        return handleToolError(err);
       }
     },
   );

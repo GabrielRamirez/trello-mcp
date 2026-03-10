@@ -1,8 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as z from "zod/v4";
 import { TrelloClient } from "../trello-client.js";
-import { textResult, errorResult } from "../utils/response.js";
-import type { TrelloCard, TrelloAction } from "../types.js";
+import { textResult, handleToolError } from "../utils/response.js";
+import type { TrelloCard, TrelloAction, TrelloAttachment, TrelloCustomFieldItem } from "../types.js";
 
 export function register(server: McpServer, client: TrelloClient) {
   server.registerTool(
@@ -26,7 +26,7 @@ export function register(server: McpServer, client: TrelloClient) {
         });
         return textResult(card);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
       }
     },
   );
@@ -69,7 +69,7 @@ export function register(server: McpServer, client: TrelloClient) {
         const card = await client.post<TrelloCard>("/cards", params);
         return textResult(card);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
       }
     },
   );
@@ -113,7 +113,7 @@ export function register(server: McpServer, client: TrelloClient) {
         );
         return textResult(card);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
       }
     },
   );
@@ -148,7 +148,7 @@ export function register(server: McpServer, client: TrelloClient) {
         );
         return textResult(card);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
       }
     },
   );
@@ -169,7 +169,7 @@ export function register(server: McpServer, client: TrelloClient) {
         });
         return textResult(card);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
       }
     },
   );
@@ -189,7 +189,7 @@ export function register(server: McpServer, client: TrelloClient) {
         await client.delete(`/cards/${cardId}`);
         return textResult({ deleted: true, cardId });
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
       }
     },
   );
@@ -212,7 +212,53 @@ export function register(server: McpServer, client: TrelloClient) {
         );
         return textResult(action);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "update_comment",
+    {
+      title: "Update Comment",
+      description: "Update the text of a comment on a card.",
+      inputSchema: z.object({
+        cardId: z.string().describe("The ID of the card"),
+        actionId: z.string().describe("The ID of the comment action to update"),
+        text: z.string().describe("The new comment text"),
+      }),
+    },
+    async ({ cardId, actionId, text }) => {
+      try {
+        const action = await client.put<TrelloAction>(
+          `/cards/${cardId}/actions/${actionId}/comments`,
+          { text },
+        );
+        return textResult(action);
+      } catch (err) {
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "delete_comment",
+    {
+      title: "Delete Comment",
+      description: "Delete a comment from a card.",
+      inputSchema: z.object({
+        cardId: z.string().describe("The ID of the card"),
+        actionId: z.string().describe("The ID of the comment action to delete"),
+      }),
+    },
+    async ({ cardId, actionId }) => {
+      try {
+        await client.delete(
+          `/cards/${cardId}/actions/${actionId}/comments`,
+        );
+        return textResult({ deleted: true, cardId, actionId });
+      } catch (err) {
+        return handleToolError(err);
       }
     },
   );
@@ -232,7 +278,7 @@ export function register(server: McpServer, client: TrelloClient) {
         await client.post(`/cards/${cardId}/idLabels`, { value: labelId });
         return textResult({ success: true, cardId, labelId });
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
       }
     },
   );
@@ -252,7 +298,7 @@ export function register(server: McpServer, client: TrelloClient) {
         await client.delete(`/cards/${cardId}/idLabels/${labelId}`);
         return textResult({ success: true, cardId, labelId });
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
       }
     },
   );
@@ -272,7 +318,7 @@ export function register(server: McpServer, client: TrelloClient) {
         await client.post(`/cards/${cardId}/idMembers`, { value: memberId });
         return textResult({ success: true, cardId, memberId });
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
       }
     },
   );
@@ -292,7 +338,195 @@ export function register(server: McpServer, client: TrelloClient) {
         await client.delete(`/cards/${cardId}/idMembers/${memberId}`);
         return textResult({ success: true, cardId, memberId });
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "unarchive_card",
+    {
+      title: "Unarchive Card",
+      description: "Unarchive (reopen) a closed Trello card.",
+      inputSchema: z.object({
+        cardId: z.string().describe("The ID of the card to unarchive"),
+      }),
+    },
+    async ({ cardId }) => {
+      try {
+        const card = await client.put<TrelloCard>(`/cards/${cardId}`, {
+          closed: "false",
+        });
+        return textResult(card);
+      } catch (err) {
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "get_card_actions",
+    {
+      title: "Get Card Actions",
+      description: "Get the activity feed (actions) for a card.",
+      inputSchema: z.object({
+        cardId: z.string().describe("The ID of the card"),
+        filter: z
+          .string()
+          .optional()
+          .describe("Comma-separated action types to filter (e.g. commentCard,updateCard)"),
+        limit: z
+          .number()
+          .optional()
+          .describe("Max number of actions to return (default: 50, max: 1000)"),
+      }),
+    },
+    async ({ cardId, filter, limit }) => {
+      try {
+        const params: Record<string, string> = {
+          fields: "id,type,date,data,memberCreator",
+          member_fields: "fullName,username",
+        };
+        if (filter) params.filter = filter;
+        if (limit !== undefined) params.limit = String(limit);
+        const actions = await client.get<TrelloAction[]>(
+          `/cards/${cardId}/actions`,
+          params,
+        );
+        return textResult(actions);
+      } catch (err) {
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "list_attachments",
+    {
+      title: "List Attachments",
+      description: "List all attachments on a Trello card.",
+      inputSchema: z.object({
+        cardId: z.string().describe("The ID of the card"),
+      }),
+    },
+    async ({ cardId }) => {
+      try {
+        const attachments = await client.get<TrelloAttachment[]>(
+          `/cards/${cardId}/attachments`,
+          { fields: "id,name,url,bytes,date,mimeType,isUpload,pos" },
+        );
+        return textResult(attachments);
+      } catch (err) {
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "add_attachment",
+    {
+      title: "Add Attachment",
+      description: "Add a URL attachment to a Trello card.",
+      inputSchema: z.object({
+        cardId: z.string().describe("The ID of the card"),
+        url: z.string().describe("The URL to attach"),
+        name: z.string().optional().describe("Display name for the attachment"),
+      }),
+    },
+    async ({ cardId, url, name }) => {
+      try {
+        const params: Record<string, string> = { url };
+        if (name) params.name = name;
+        const attachment = await client.post<TrelloAttachment>(
+          `/cards/${cardId}/attachments`,
+          params,
+        );
+        return textResult(attachment);
+      } catch (err) {
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "delete_attachment",
+    {
+      title: "Delete Attachment",
+      description: "Delete an attachment from a Trello card.",
+      inputSchema: z.object({
+        cardId: z.string().describe("The ID of the card"),
+        attachmentId: z.string().describe("The ID of the attachment to delete"),
+      }),
+    },
+    async ({ cardId, attachmentId }) => {
+      try {
+        await client.delete(`/cards/${cardId}/attachments/${attachmentId}`);
+        return textResult({ deleted: true, cardId, attachmentId });
+      } catch (err) {
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "get_card_custom_fields",
+    {
+      title: "Get Card Custom Fields",
+      description:
+        "Get custom field values for a Trello card. Requires Trello Premium or Enterprise.",
+      inputSchema: z.object({
+        cardId: z.string().describe("The ID of the card"),
+      }),
+    },
+    async ({ cardId }) => {
+      try {
+        const items = await client.get<TrelloCustomFieldItem[]>(
+          `/cards/${cardId}/customFieldItems`,
+        );
+        return textResult(items);
+      } catch (err) {
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "update_custom_field_item",
+    {
+      title: "Update Custom Field Item",
+      description:
+        "Set the value of a custom field on a card. Requires Trello Premium or Enterprise.",
+      inputSchema: z.object({
+        cardId: z.string().describe("The ID of the card"),
+        customFieldId: z.string().describe("The ID of the custom field"),
+        value: z
+          .record(z.string(), z.string())
+          .optional()
+          .describe(
+            "Value object — key depends on field type: { text: '...' }, { number: '...' }, { checked: 'true' }, { date: '2024-01-01T00:00:00.000Z' }. Omit or pass empty to clear.",
+          ),
+        idValue: z
+          .string()
+          .optional()
+          .describe("For dropdown fields: the ID of the option to select. Pass empty string to clear."),
+      }),
+    },
+    async ({ cardId, customFieldId, value, idValue }) => {
+      try {
+        const body: Record<string, unknown> = {};
+        if (idValue !== undefined) {
+          body.idValue = idValue || "";
+        } else {
+          body.value = value ?? {};
+        }
+        const result = await client.put(
+          `/cards/${cardId}/customField/${customFieldId}/item`,
+          undefined,
+          body,
+        );
+        return textResult(result);
+      } catch (err) {
+        return handleToolError(err);
       }
     },
   );

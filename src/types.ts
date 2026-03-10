@@ -74,6 +74,72 @@ export interface TrelloAction {
   memberCreator?: TrelloMember;
 }
 
+export interface TrelloAttachment {
+  id: string;
+  name: string;
+  url: string;
+  bytes: number | null;
+  date: string;
+  mimeType: string | null;
+  isUpload: boolean;
+  pos: number;
+}
+
+export interface TrelloCustomFieldItem {
+  id: string;
+  idCustomField: string;
+  idModel: string;
+  modelType: string;
+  value: Record<string, string>;
+}
+
+export interface TrelloCustomField {
+  id: string;
+  idModel: string;
+  modelType: string;
+  name: string;
+  type: string;
+  fieldGroup: string;
+  pos: number;
+  options?: TrelloCustomFieldOption[];
+}
+
+export interface TrelloCustomFieldOption {
+  id: string;
+  idCustomField: string;
+  value: Record<string, string>;
+  pos: number;
+  color: string;
+}
+
+export interface TrelloOrganization {
+  id: string;
+  name: string;
+  displayName: string;
+  desc: string;
+  url: string;
+  website: string | null;
+}
+
+export interface TrelloWebhook {
+  id: string;
+  description: string;
+  idModel: string;
+  callbackURL: string;
+  active: boolean;
+  consecutiveFailures: number;
+  firstConsecutiveFailDate: string | null;
+}
+
+export interface TrelloNotification {
+  id: string;
+  type: string;
+  date: string;
+  unread: boolean;
+  data: Record<string, unknown>;
+  memberCreator?: TrelloMember;
+}
+
 export interface TrelloSearchResult {
   boards: TrelloBoard[];
   cards: TrelloCard[];

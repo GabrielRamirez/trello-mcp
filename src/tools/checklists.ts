@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as z from "zod/v4";
 import { TrelloClient } from "../trello-client.js";
-import { textResult, errorResult } from "../utils/response.js";
+import { textResult, handleToolError } from "../utils/response.js";
 import type { TrelloChecklist, TrelloCheckItem } from "../types.js";
 
 export function register(server: McpServer, client: TrelloClient) {
@@ -23,7 +23,7 @@ export function register(server: McpServer, client: TrelloClient) {
         );
         return textResult(checklist);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
       }
     },
   );
@@ -57,7 +57,7 @@ export function register(server: McpServer, client: TrelloClient) {
         );
         return textResult(item);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
       }
     },
   );
@@ -94,7 +94,103 @@ export function register(server: McpServer, client: TrelloClient) {
         );
         return textResult(item);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "get_checklist",
+    {
+      title: "Get Checklist",
+      description: "Get a checklist by ID, including all its items.",
+      inputSchema: z.object({
+        checklistId: z.string().describe("The ID of the checklist"),
+      }),
+    },
+    async ({ checklistId }) => {
+      try {
+        const checklist = await client.get<TrelloChecklist>(
+          `/checklists/${checklistId}`,
+          {
+            fields: "id,name,idBoard,idCard,pos",
+            checkItem_fields: "id,name,state,pos,idChecklist",
+          },
+        );
+        return textResult(checklist);
+      } catch (err) {
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "update_checklist",
+    {
+      title: "Update Checklist",
+      description: "Update a checklist's name or position.",
+      inputSchema: z.object({
+        checklistId: z.string().describe("The ID of the checklist"),
+        name: z.string().optional().describe("New name for the checklist"),
+        pos: z
+          .union([z.enum(["top", "bottom"]), z.number()])
+          .optional()
+          .describe("New position"),
+      }),
+    },
+    async ({ checklistId, name, pos }) => {
+      try {
+        const params: Record<string, string> = {};
+        if (name !== undefined) params.name = name;
+        if (pos !== undefined) params.pos = String(pos);
+        const checklist = await client.put<TrelloChecklist>(
+          `/checklists/${checklistId}`,
+          params,
+        );
+        return textResult(checklist);
+      } catch (err) {
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "delete_checklist",
+    {
+      title: "Delete Checklist",
+      description: "Permanently delete a checklist from a card.",
+      inputSchema: z.object({
+        checklistId: z.string().describe("The ID of the checklist to delete"),
+      }),
+    },
+    async ({ checklistId }) => {
+      try {
+        await client.delete(`/checklists/${checklistId}`);
+        return textResult({ deleted: true, checklistId });
+      } catch (err) {
+        return handleToolError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "delete_checklist_item",
+    {
+      title: "Delete Checklist Item",
+      description: "Delete an item from a checklist.",
+      inputSchema: z.object({
+        checklistId: z.string().describe("The ID of the checklist"),
+        checkItemId: z.string().describe("The ID of the check item to delete"),
+      }),
+    },
+    async ({ checklistId, checkItemId }) => {
+      try {
+        await client.delete(
+          `/checklists/${checklistId}/checkItems/${checkItemId}`,
+        );
+        return textResult({ deleted: true, checklistId, checkItemId });
+      } catch (err) {
+        return handleToolError(err);
       }
     },
   );
