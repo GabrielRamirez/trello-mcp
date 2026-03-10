@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- **`create_label` tool** — Create new labels on a board with a name and color. Available colors: yellow, purple, blue, red, green, orange, black, sky, pink, lime.
+
 ### Improved
 
 - **Dramatically reduced API response sizes** — All GET/list endpoints now use Trello's `fields` parameter to request only essential fields, reducing token usage by ~80% (e.g., `list_boards` dropped from ~14.5k tokens to ~1-2k). Affected tools:

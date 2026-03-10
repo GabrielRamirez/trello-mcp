@@ -2,7 +2,7 @@
 
 A [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server that connects [Trello](https://trello.com) to Claude Code. Manage your boards, lists, cards, checklists, and more — all through natural language.
 
-> **26 tools** | **Zero config startup** | **Auto-loads `.env`** | **Docker ready** | **Remote HTTP support**
+> **27 tools** | **Zero config startup** | **Auto-loads `.env`** | **Docker ready** | **Remote HTTP support**
 
 ---
 
@@ -57,7 +57,7 @@ Open Claude Code and ask:
 List my Trello boards
 ```
 
-You should see your boards listed. The 26 Trello tools are now available in every Claude Code conversation.
+You should see your boards listed. The 27 Trello tools are now available in every Claude Code conversation.
 
 ---
 
@@ -221,7 +221,7 @@ Once connected, just ask Claude in natural language:
 
 ## Tools Reference
 
-### Boards (7 tools)
+### Boards (8 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -232,6 +232,7 @@ Once connected, just ask Claude in natural language:
 | `get_board_labels` | Get all labels on a board |
 | `get_board_members` | Get all members of a board |
 | `create_board` | Create a new board |
+| `create_label` | Create a new label on a board |
 
 ### Cards (11 tools)
 
@@ -285,7 +286,7 @@ trello-mcp/
 │   ├── trello-client.ts      # HTTP client with auth and error handling
 │   ├── types.ts              # TypeScript interfaces for Trello objects
 │   ├── tools/
-│   │   ├── boards.ts         # Board tools (7)
+│   │   ├── boards.ts         # Board tools (8)
 │   │   ├── cards.ts          # Card tools (11)
 │   │   ├── lists.ts          # List tools (4)
 │   │   ├── search.ts         # Search tool (1)
