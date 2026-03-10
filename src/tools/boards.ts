@@ -192,4 +192,33 @@ export function register(server: McpServer, client: TrelloClient) {
       }
     },
   );
+
+  server.registerTool(
+    "create_label",
+    {
+      title: "Create Label",
+      description: "Create a new label on a Trello board.",
+      inputSchema: z.object({
+        boardId: z.string().describe("The ID of the board"),
+        name: z.string().describe("Name of the label"),
+        color: z
+          .enum([
+            "yellow", "purple", "blue", "red", "green", "orange",
+            "black", "sky", "pink", "lime",
+          ])
+          .describe("Color of the label"),
+      }),
+    },
+    async ({ boardId, name, color }) => {
+      try {
+        const label = await client.post<TrelloLabel>(
+          `/boards/${boardId}/labels`,
+          { name, color },
+        );
+        return textResult(label);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+    },
+  );
 }
