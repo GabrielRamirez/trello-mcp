@@ -26,7 +26,9 @@ export function register(server: McpServer, client: TrelloClient) {
     },
     async ({ filter }) => {
       try {
-        const params: Record<string, string> = {};
+        const params: Record<string, string> = {
+          fields: "id,name,desc,url,closed",
+        };
         if (filter) params.filter = filter;
         const boards = await client.get<TrelloBoard[]>(
           "/members/me/boards",
@@ -51,7 +53,9 @@ export function register(server: McpServer, client: TrelloClient) {
     },
     async ({ boardId }) => {
       try {
-        const board = await client.get<TrelloBoard>(`/boards/${boardId}`);
+        const board = await client.get<TrelloBoard>(`/boards/${boardId}`, {
+          fields: "id,name,desc,url,closed,idOrganization,shortUrl",
+        });
         return textResult(board);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -74,7 +78,9 @@ export function register(server: McpServer, client: TrelloClient) {
     },
     async ({ boardId, filter }) => {
       try {
-        const params: Record<string, string> = {};
+        const params: Record<string, string> = {
+          fields: "id,name,closed,pos,idBoard",
+        };
         if (filter) params.filter = filter;
         const lists = await client.get<TrelloList[]>(
           `/boards/${boardId}/lists`,
@@ -102,7 +108,9 @@ export function register(server: McpServer, client: TrelloClient) {
     },
     async ({ boardId, filter }) => {
       try {
-        const params: Record<string, string> = {};
+        const params: Record<string, string> = {
+          fields: "id,name,desc,closed,url,idList,due,dueComplete,labels,idMembers,pos,shortUrl",
+        };
         if (filter) params.filter = filter;
         const cards = await client.get<TrelloCard[]>(
           `/boards/${boardId}/cards`,

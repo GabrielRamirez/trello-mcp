@@ -18,8 +18,12 @@ export function register(server: McpServer, client: TrelloClient) {
     async ({ listId }) => {
       try {
         const [list, cards] = await Promise.all([
-          client.get<TrelloList>(`/lists/${listId}`),
-          client.get<TrelloCard[]>(`/lists/${listId}/cards`),
+          client.get<TrelloList>(`/lists/${listId}`, {
+            fields: "id,name,closed,pos,idBoard",
+          }),
+          client.get<TrelloCard[]>(`/lists/${listId}/cards`, {
+            fields: "id,name,desc,closed,url,idList,due,dueComplete,labels,idMembers,pos,shortUrl",
+          }),
         ]);
         return textResult({ ...list, cards });
       } catch (err) {

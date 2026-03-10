@@ -18,7 +18,9 @@ export function register(server: McpServer, client: TrelloClient) {
     async ({ cardId }) => {
       try {
         const card = await client.get<TrelloCard>(`/cards/${cardId}`, {
+          fields: "id,name,desc,closed,url,idList,idBoard,due,dueComplete,labels,idMembers,pos,shortUrl",
           checklists: "all",
+          checklist_fields: "id,name,pos",
           members: "true",
           member_fields: "fullName,username",
         });

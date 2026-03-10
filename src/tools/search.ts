@@ -37,7 +37,11 @@ export function register(server: McpServer, client: TrelloClient) {
     },
     async ({ query, modelTypes, boardIds, cardsLimit, boardsLimit, partial }) => {
       try {
-        const params: Record<string, string> = { query };
+        const params: Record<string, string> = {
+          query,
+          card_fields: "id,name,desc,closed,url,idList,idBoard,due,dueComplete,labels,idMembers,shortUrl",
+          board_fields: "id,name,desc,url,closed",
+        };
         if (modelTypes) params.modelTypes = modelTypes;
         if (boardIds?.length) params.idBoards = boardIds.join(",");
         if (cardsLimit !== undefined) params.cards_limit = String(cardsLimit);
