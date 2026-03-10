@@ -9,13 +9,16 @@ RUN npm run build
 # Prune to production-only deps
 RUN npm ci --omit=dev
 
-# Runtime stage
-FROM node:22-alpine
+# Prepare a clean runtime base with all upgrades applied
+FROM node:22-alpine AS runtime-base
 RUN apk upgrade --no-cache \
- && addgroup -g 1001 -S mcpuser \
- && adduser -S mcpuser -u 1001 \
- && npm cache clean --force \
- && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+ && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx \
+ && rm -rf /var/cache/apk/* /tmp/*
+
+# Final stage — copy clean filesystem from runtime-base
+FROM scratch
+COPY --from=runtime-base / /
+RUN addgroup -g 1001 -S mcpuser && adduser -S mcpuser -u 1001
 WORKDIR /app
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./
